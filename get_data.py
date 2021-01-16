@@ -1518,11 +1518,11 @@ def prepare_data_for_model(results, stats, target_column = 'WON', factor_policy 
 
     fin_out_no_nas = fin_out.dropna()
 
-    return([fin_out, fin_out_no_nas])
+    return({'raw_data': fin_out, 'no_nas': fin_out_no_nas})
 
 def fit_model(data, factors, target_response):
-    data = fin_out_no_nas.copy()
-    factors = list(factor_policy.keys()) + ['HOME']
+    #data = fin_out_no_nas.copy()
+    factors = list(factors.keys()) + ['HOME']
     target_response = 'WON'
 
     #X_train, X_test, y_train, y_test = train_test_split(data[factors], data[target_response], random_state=42)
@@ -1581,6 +1581,8 @@ def fit_model(data, factors, target_response):
     #z = pd.merge(to[['index', 'MARGIN_OF_VICTORY']], preds, left_on='index', right_on='number')
 
     l = preds.groupby('confidence_bucket')['MARGIN_OF_VICTORY'].describe(percentiles = [0.05, 0.1, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.90, 0.95])
+
+    return({'model': model, 'spread_target': nopq3, 'scaler': scaler})
 
 # PROBLEMS: biased data; not confirmed correct
 def validate_model(data, date_to_start, factors, target_response):

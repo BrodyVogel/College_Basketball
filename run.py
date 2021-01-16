@@ -1,5 +1,159 @@
 from get_data import *
 
+# read data
+ncaa_history = pd.read_csv('ncaab_history.csv')
+fin_output = pd.read_csv('ncaab_results.csv')
+
+# deprecated factor policy
+factor_policy_dep = {
+    "predictive-by-other_rank":
+        {"one_point": [34, 48],
+         "two_points": [82.5, 104.5],
+         "three_points": [134, 177],
+         "two_fac": None},
+
+    "three-point-pct_rank":
+        {"one_point": [183, 228],
+         "two_points": [400, 500],
+         "three_points": None,
+         "two_fac": None},
+
+    "opponent-three-point-pct_rank":
+        {"one_point": [179.5, 222.5],
+         "two_points": [400, 500],
+         "three_points": None,
+         "two_fac": None},
+
+    "offensive-floor-percentage-advantage":
+        {"one_point": [108, 134.5],
+         "two_points": [167.5, 211.5],
+         "three_points": [212, 345],
+         "two_fac": ['floor-percentage_rank', 'opponent-floor-percentage_rank']},
+
+    "defensive-floor-percentage-advantage":
+        {"one_point": [80, 101.5],
+         "two_points": [160, 204],
+         "three_points": [204.5, 346],
+         "two_fac": ['opponent-floor-percentage_rank', 'floor-percentage_rank']},
+
+    "ftm_advantage":
+        {"one_point": [232.5, 349],
+         "two_points": [500, 600],
+         "three_points": None,
+         "two_fac": ['ftm-per-100-possessions_rank', 'opponent-ftm-per-100-possessions_rank']},
+
+    "offensive_rebounding_advantage":
+        {"one_point": [146, 179.5],
+         "two_points": [400, 500],
+         "three_points": None,
+         "two_fac": ['offensive-rebounding-pct_rank', 'defensive-rebounding-pct_rank']},
+
+    "defensive_rebounding_advantage":
+        {"one_point": [195, 239.5],
+         "two_points": [400, 500],
+         "three_points": None,
+         "two_fac": ['defensive-rebounding-pct_rank', 'offensive-rebounding-pct_rank']},
+
+    "forced_turnover_advantage":
+        {"one_point": [224, 352],
+         "two_points": [400, 500],
+         "three_points": None,
+         "two_fac": ['opponent-turnovers-per-possession_rank', 'turnovers-per-possession_rank']
+         },
+
+    "committed_turnover_advantage":
+        {"one_point": [250.5, 349],
+         "two_points": [400, 500],
+         "three_points": None,
+         "two_fac": ['turnovers-per-possession_rank', 'opponent-turnovers-per-possession_rank']
+         },
+
+    "offensive_effective_possession_advantage":
+        {"one_point": [201, 246.5],
+         "two_points": [400, 500],
+         "three_points": None,
+         "two_fac": ['effective-possession-ratio_rank', 'opponent-effective-possession-ratio_rank']},
+
+    "defensive_effective_possession_advantage":
+        {"one_point": [178.5, 222.5],
+         "two_points": [400, 500],
+         "three_points": None,
+         "two_fac": ['opponent-effective-possession-ratio_rank', 'effective-possession-ratio_rank']}
+
+}
+
+# live factor policy
+factor_policy = {
+    "predictive-by-other_rank":
+        {"one_point": [34, 48],
+         "two_points": [82.5, 104.5],
+         "three_points": [134, 177],
+         "two_fac": None,
+         "multi_fac": None},
+
+    "three-point-pct_rank":
+        {"one_point": [183, 228],
+         "two_points": [4000, 5000],
+         "three_points": None,
+         "two_fac": None,
+         "multi_fac": None},
+
+    "opponent-three-point-pct_rank":
+        {"one_point": [179.5, 222.5],
+         "two_points": [4000, 5000],
+         "three_points": None,
+         "two_fac": None,
+         "multi_fac": None},
+
+    "floor-percentage-advantage":
+        {"one_point": [100.5, 130.5],
+         "two_points": [164.5, 202.5],
+         "three_points": [255, 328],
+         "two_fac": None,
+         "multi_fac": [['floor-percentage_rank', 'opponent-floor-percentage_rank'], ['floor-percentage_rank', 'opponent-floor-percentage_rank']]},
+
+    "ftm_advantage":
+        {"one_point": [197, 244],
+         "two_points": [5000, 6000],
+         "three_points": None,
+         "two_fac": None,
+         "multi_fac": [['ftm-per-100-possessions_rank', 'opponent-ftm-per-100-possessions_rank'], ['ftm-per-100-possessions_rank', 'opponent-ftm-per-100-possessions_rank']]},
+
+    "rebounding_advantage":
+        {"one_point": [174, 213],
+         "two_points": [333.5, 667],
+         "three_points": None,
+         "two_fac": None,
+         "multi_fac": [['offensive-rebounding-pct_rank', 'defensive-rebounding-pct_rank'], ['offensive-rebounding-pct_rank', 'defensive-rebounding-pct_rank']]},
+
+    "turnover_advantage":
+        {"one_point": [207, 253],
+         "two_points": [4000, 5000],
+         "three_points": None,
+         "two_fac": None,
+         "multi_fac": [['opponent-turnovers-per-possession_rank', 'turnovers-per-possession_rank'], ['opponent-turnovers-per-possession_rank', 'turnovers-per-possession_rank']]
+         },
+
+    "effective_possession_advantage":
+        {"one_point": [178.5, 225],
+         "two_points": [4000, 5000],
+         "three_points": None,
+         "two_fac": None,
+         "multi_fac": [['effective-possession-ratio_rank', 'opponent-effective-possession-ratio_rank'], ['effective-possession-ratio_rank', 'opponent-effective-possession-ratio_rank']]},
+
+}
+
+# create data for model
+data_for_model = prepare_data_for_model(fin_output, ncaa_history, target_column = 'WON', factor_policy = factor_policy)['no_nas']
+
+# fit the model
+model_fit = fit_model(data_for_model, factor_policy, target_response = 'WON')
+
+# extract model object, scaler, and spread targets
+model = model_fit['model']
+scaler = model_fit['scaler']
+nopq3 = model_fit['spread_target']
+
 # get data for today
 for_today = get_data_ncaam('2021-01-16', attributes = {'offensive-efficiency': 'desc',
                                                 'floor-percentage': 'desc',
@@ -438,145 +592,6 @@ for x in range(len(today['Home Team'])):
         today.loc[x, 'Away Team'] = proper_names[today['Away Team'][x]]
     except:
         today.loc[x, 'Away Team'] = today['Away Team'][x]
-
-# deprecated factor policy
-factor_policy_dep = {
-    "predictive-by-other_rank":
-        {"one_point": [34, 48],
-         "two_points": [82.5, 104.5],
-         "three_points": [134, 177],
-         "two_fac": None},
-
-    "three-point-pct_rank":
-        {"one_point": [183, 228],
-         "two_points": [400, 500],
-         "three_points": None,
-         "two_fac": None},
-
-    "opponent-three-point-pct_rank":
-        {"one_point": [179.5, 222.5],
-         "two_points": [400, 500],
-         "three_points": None,
-         "two_fac": None},
-
-    "offensive-floor-percentage-advantage":
-        {"one_point": [108, 134.5],
-         "two_points": [167.5, 211.5],
-         "three_points": [212, 345],
-         "two_fac": ['floor-percentage_rank', 'opponent-floor-percentage_rank']},
-
-    "defensive-floor-percentage-advantage":
-        {"one_point": [80, 101.5],
-         "two_points": [160, 204],
-         "three_points": [204.5, 346],
-         "two_fac": ['opponent-floor-percentage_rank', 'floor-percentage_rank']},
-
-    "ftm_advantage":
-        {"one_point": [232.5, 349],
-         "two_points": [500, 600],
-         "three_points": None,
-         "two_fac": ['ftm-per-100-possessions_rank', 'opponent-ftm-per-100-possessions_rank']},
-
-    "offensive_rebounding_advantage":
-        {"one_point": [146, 179.5],
-         "two_points": [400, 500],
-         "three_points": None,
-         "two_fac": ['offensive-rebounding-pct_rank', 'defensive-rebounding-pct_rank']},
-
-    "defensive_rebounding_advantage":
-        {"one_point": [195, 239.5],
-         "two_points": [400, 500],
-         "three_points": None,
-         "two_fac": ['defensive-rebounding-pct_rank', 'offensive-rebounding-pct_rank']},
-
-    "forced_turnover_advantage":
-        {"one_point": [224, 352],
-         "two_points": [400, 500],
-         "three_points": None,
-         "two_fac": ['opponent-turnovers-per-possession_rank', 'turnovers-per-possession_rank']
-         },
-
-    "committed_turnover_advantage":
-        {"one_point": [250.5, 349],
-         "two_points": [400, 500],
-         "three_points": None,
-         "two_fac": ['turnovers-per-possession_rank', 'opponent-turnovers-per-possession_rank']
-         },
-
-    "offensive_effective_possession_advantage":
-        {"one_point": [201, 246.5],
-         "two_points": [400, 500],
-         "three_points": None,
-         "two_fac": ['effective-possession-ratio_rank', 'opponent-effective-possession-ratio_rank']},
-
-    "defensive_effective_possession_advantage":
-        {"one_point": [178.5, 222.5],
-         "two_points": [400, 500],
-         "three_points": None,
-         "two_fac": ['opponent-effective-possession-ratio_rank', 'effective-possession-ratio_rank']}
-
-}
-
-# live factor policy
-factor_policy = {
-    "predictive-by-other_rank":
-        {"one_point": [34, 48],
-         "two_points": [82.5, 104.5],
-         "three_points": [134, 177],
-         "two_fac": None,
-         "multi_fac": None},
-
-    "three-point-pct_rank":
-        {"one_point": [183, 228],
-         "two_points": [4000, 5000],
-         "three_points": None,
-         "two_fac": None,
-         "multi_fac": None},
-
-    "opponent-three-point-pct_rank":
-        {"one_point": [179.5, 222.5],
-         "two_points": [4000, 5000],
-         "three_points": None,
-         "two_fac": None,
-         "multi_fac": None},
-
-    "floor-percentage-advantage":
-        {"one_point": [100.5, 130.5],
-         "two_points": [164.5, 202.5],
-         "three_points": [255, 328],
-         "two_fac": None,
-         "multi_fac": [['floor-percentage_rank', 'opponent-floor-percentage_rank'], ['floor-percentage_rank', 'opponent-floor-percentage_rank']]},
-
-    "ftm_advantage":
-        {"one_point": [197, 244],
-         "two_points": [5000, 6000],
-         "three_points": None,
-         "two_fac": None,
-         "multi_fac": [['ftm-per-100-possessions_rank', 'opponent-ftm-per-100-possessions_rank'], ['ftm-per-100-possessions_rank', 'opponent-ftm-per-100-possessions_rank']]},
-
-    "rebounding_advantage":
-        {"one_point": [174, 213],
-         "two_points": [333.5, 667],
-         "three_points": None,
-         "two_fac": None,
-         "multi_fac": [['offensive-rebounding-pct_rank', 'defensive-rebounding-pct_rank'], ['offensive-rebounding-pct_rank', 'defensive-rebounding-pct_rank']]},
-
-    "turnover_advantage":
-        {"one_point": [207, 253],
-         "two_points": [4000, 5000],
-         "three_points": None,
-         "two_fac": None,
-         "multi_fac": [['opponent-turnovers-per-possession_rank', 'turnovers-per-possession_rank'], ['opponent-turnovers-per-possession_rank', 'turnovers-per-possession_rank']]
-         },
-
-    "effective_possession_advantage":
-        {"one_point": [178.5, 225],
-         "two_points": [4000, 5000],
-         "three_points": None,
-         "two_fac": None,
-         "multi_fac": [['effective-possession-ratio_rank', 'opponent-effective-possession-ratio_rank'], ['effective-possession-ratio_rank', 'opponent-effective-possession-ratio_rank']]},
-
-}
 
 # evaluate with model
 for row in range(len(today['Home Team'])):
